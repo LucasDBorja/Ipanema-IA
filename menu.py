@@ -9,9 +9,9 @@ import pyttsx3
 from datetime import datetime
 
 scope = "user-read-playback-state,user-modify-playback-state"
-username = "Lucas Daniel"
-client_id = "599d97ecf88d4f1296c66ba3c107a6cd"
-client_secret = "be984ae0f6e94c5ba84852f71ced7bee"
+username = "Seu login, nome ou email"
+client_id = "entre na plataforma de desenvolvedor e cadastre o seu"
+client_secret = "entre na plataforma de desenvolvedor e cadastre o seu"
 redirect_uri = "http://localhost:8888/callback"
 
 token = util.prompt_for_user_token(username, scope, client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri)
@@ -82,14 +82,14 @@ class Agenda:
 
 agenda = Agenda()
 
-agenda.carregar_agenda('C:\\Users\\ld388\\OneDrive\\Desktop\\Ipanema\\Agenda.txt')
-agenda.carregar_anotacoes('C:\\Users\\ld388\\OneDrive\\Desktop\\Ipanema\\Anotacoes.txt')
+agenda.carregar_agenda('Adcicione o seu local')
+agenda.carregar_anotacoes('Adcicione o seu local')
 
 def marcar_compromisso():
     data = input("Digite a data do compromisso (DD/MM/AAAA): ")
     compromisso = input("Digite o compromisso: ")
     agenda.adicionar_compromisso(data, compromisso)
-    agenda.salvar_agenda('C:\\Users\\ld388\\OneDrive\\Desktop\\Ipanema\\Agenda.txt')
+    agenda.salvar_agenda('Adcicione o seu local')
     print("Compromisso marcado com sucesso!")
 
 def mostrar_compromissos():
@@ -109,7 +109,7 @@ def fazer_anotacao():
     titulo = input("Digite o título da anotação: ")
     conteudo = input("Digite o conteúdo da anotação: ")
     agenda.adicionar_anotacao(titulo, conteudo)
-    agenda.salvar_anotacoes('C:\\Users\\ld388\\OneDrive\\Desktop\\Ipanema\\Anotacoes.txt')
+    agenda.salvar_anotacoes('Adcicione o seu local')
     print("Anotação salva com sucesso!")
 
 def mostrar_anotacoes():
