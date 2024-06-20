@@ -12,13 +12,13 @@ from PIL import Image, ImageTk
 import pyttsx3
 import spacy
 
-GOOGLE_API_KEY = 'AIzaSyA5RBLA9Aq3AYD2SUxSiythUg6VCMW2_yI'
-SEARCH_ENGINE_ID = 'e127997aced3a4a6c'
+GOOGLE_API_KEY = ''
+SEARCH_ENGINE_ID = ''
 
 scope = "user-read-playback-state,user-modify-playback-state"
-username = "Lucas Daniel"
-client_id = "599d97ecf88d4f1296c66ba3c107a6cd"
-client_secret = "be984ae0f6e94c5ba84852f71ced7bee"
+username = ""
+client_id = ""
+client_secret = ""
 redirect_uri = "http://localhost:8888/callback"
 
 # Obtendo token de acesso do Spotify
