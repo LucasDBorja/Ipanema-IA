@@ -1,26 +1,27 @@
 import os
 import random
 import webbrowser
+import requests
+import tkinter as tk
+from tkinter import simpledialog, messagebox, Menu
+from datetime import datetime
 import spotipy
 import spotipy.util as util
-import spacy
 import speech_recognition as sr
+from PIL import Image, ImageTk
 import pyttsx3
-from datetime import datetime
-import tkinter as tk
-from tkinter import messagebox, simpledialog
-import requests
+import spacy
 
-# Variáveis da API de Pesquisa Personalizada do Google
-GOOGLE_API_KEY = ''
-SEARCH_ENGINE_ID = ''
+GOOGLE_API_KEY = 'AIzaSyA5RBLA9Aq3AYD2SUxSiythUg6VCMW2_yI'
+SEARCH_ENGINE_ID = 'e127997aced3a4a6c'
 
 scope = "user-read-playback-state,user-modify-playback-state"
-username = ""
-client_id = ""
-client_secret = ""
+username = "Lucas Daniel"
+client_id = "599d97ecf88d4f1296c66ba3c107a6cd"
+client_secret = "be984ae0f6e94c5ba84852f71ced7bee"
 redirect_uri = "http://localhost:8888/callback"
 
+# Obtendo token de acesso do Spotify
 token = util.prompt_for_user_token(username, scope, client_id, client_secret, redirect_uri)
 
 if token:
@@ -28,9 +29,11 @@ if token:
 else:
     print("Erro ao obter token de acesso do Spotify. Verifique suas credenciais e tente novamente.")
 
+# Inicializando objetos necessários
 recognizer = sr.Recognizer()
 nlp = spacy.load("pt_core_news_sm")
 
+# Classe para manipulação da agenda
 class Agenda:
     def __init__(self):
         self.compromissos = {}
@@ -88,9 +91,11 @@ class Agenda:
 
 agenda = Agenda()
 
+# Carregando dados da agenda
 agenda.carregar_agenda('agenda.txt')
 agenda.carregar_anotacoes('anotacoes.txt')
 
+# Funções para interação com o usuário
 def marcar_compromisso():
     data = simpledialog.askstring("Marcar Compromisso", "Digite a data do compromisso (DD/MM/AAAA):")
     compromisso = simpledialog.askstring("Marcar Compromisso", "Digite o compromisso:")
@@ -152,76 +157,204 @@ def contar_piada():
     messagebox.showinfo("Piada", piada_escolhida)
 
 def fazer_pesquisa():
-    pesquisa = simpledialog.askstring("Fazer Pesquisa", "Digite o que você deseja pesquisar:")
-    if pesquisa:
-        resultados = realizar_pesquisa_google(pesquisa)
-        if resultados:
-            resultados_str = "\n".join(f"{i+1}. {res['title']} ({res['link']})" for i, res in enumerate(resultados))
-            messagebox.showinfo("Resultados da Pesquisa", f"Resultados para '{pesquisa}':\n\n{resultados_str}")
+    termo = simpledialog.askstring("Fazer Pesquisa", "Digite o termo da pesquisa:")
+    if termo:
+        pesquisa_google(termo)
+
+def pesquisa_google(termo):
+    url = f"https://www.googleapis.com/customsearch/v1?key={GOOGLE_API_KEY}&cx={SEARCH_ENGINE_ID}&q={termo}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        results = response.json().get('items', [])
+        if results:
+            resultados_str = "Resultados da pesquisa:\n"
+            for result in results:
+                titulo = result.get('title')
+                link = result.get('link')
+                resultados_str += f"- {titulo}: {link}\n"
+            messagebox.showinfo("Resultados da Pesquisa", resultados_str)
         else:
-            messagebox.showinfo("Resultados da Pesquisa", "Nenhum resultado encontrado.")
+            messagebox.showinfo("Resultados da Pesquisa", "Nenhum resultado encontrado para o termo especificado.")
+    except requests.exceptions.RequestException as e:
+        messagebox.showerror("Erro na Pesquisa", f"Erro ao executar a pesquisa: {e}")
 
-def realizar_pesquisa_google(query):
-    url = f"https://www.googleapis.com/customsearch/v1?q={query}&key={GOOGLE_API_KEY}&cx={SEARCH_ENGINE_ID}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        results = response.json().get("items", [])
-        return [{"title": item["title"], "link": item["link"]} for item in results]
+def abrir_spotify_local():
+    global token, sp
+    if token:
+        spotify_path = r"C:\Users\ld388\AppData\Local\Microsoft\WindowsApps\SpotifyAB.SpotifyMusic_zpdnekdrzrea0\Spotify.exe"
+        if os.path.exists(spotify_path):
+            os.startfile(spotify_path)
+        else:
+            messagebox.showerror("Erro", "O aplicativo Spotify não está instalado no sistema.")
     else:
-        print("Erro na pesquisa:", response.status_code)
-        return []
-
-def abrir_spotify():
-    os.system("spotify")
+        messagebox.showerror("Erro", "Você não está autenticado no Spotify. Tente reiniciar o programa.")
 
 def continuar_musica():
-    sp.start_playback()
+    if token:
+        sp.start_playback()
+        messagebox.showinfo("Sucesso", "Continuando música no Spotify.")
+    else:
+        messagebox.showerror("Erro", "Você não está autenticado no Spotify. Tente reiniciar o programa.")
 
 def pausar_musica():
-    sp.pause_playback()
+    if token:
+        sp.pause_playback()
+        messagebox.showinfo("Sucesso", "Pausando música no Spotify.")
+    else:
+        messagebox.showerror("Erro", "Você não está autenticado no Spotify. Tente reiniciar o programa.")
 
-def colocar_musica_anterior():
-    sp.previous_track()
+def pesquisar_musica():
+    musica = simpledialog.askstring("Pesquisar Música", "Digite o nome da música:")
+    if token and musica:
+        results = sp.search(q=musica, limit=1)
+        if results['tracks']['items']:
+            track_uri = results['tracks']['items'][0]['uri']
+            sp.start_playback(uris=[track_uri])
+            messagebox.showinfo("Sucesso", f"Reproduzindo música: {musica}")
+        else:
+            messagebox.showerror("Erro", f"Nenhuma música encontrada com o nome '{musica}'.")
+    elif not musica:
+        messagebox.showerror("Erro", "Nenhum nome de música especificado.")
+    else:
+        messagebox.showerror("Erro", "Você não está autenticado no Spotify. Tente reiniciar o programa.")
 
-def colocar_proxima_musica():
-    sp.next_track()
+def buscar_imagem():
+    termo = simpledialog.askstring("Buscar Imagem", "Digite o termo para buscar imagem:")
+    if termo:
+        url = f"https://www.googleapis.com/customsearch/v1?key={GOOGLE_API_KEY}&cx={SEARCH_ENGINE_ID}&searchType=image&q={termo}"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            results = response.json().get('items', [])
+            if results:
+                imagem_url = results[0]['link']
+                exibir_imagem_url(imagem_url)
+            else:
+                messagebox.showinfo("Imagem", f"Nenhuma imagem encontrada para o termo '{termo}'.")
+        except requests.exceptions.RequestException as e:
+            messagebox.showerror("Erro na Busca de Imagem", f"Erro ao buscar imagem: {e}")
+    else:
+        messagebox.showerror("Erro na Busca de Imagem", "Nenhum termo especificado.")
 
-def menu_spotify():
-    spotify_menu = tk.Toplevel(root)
-    spotify_menu.title("Menu Spotify")
-    
-    tk.Button(spotify_menu, text="Abrir Spotify", command=abrir_spotify).pack(pady=10)
-    tk.Button(spotify_menu, text="Pausar Música", command=pausar_musica).pack(pady=10)
-    tk.Button(spotify_menu, text="Continuar Música", command=continuar_musica).pack(pady=10)
-    tk.Button(spotify_menu, text="Próxima Música", command=colocar_proxima_musica).pack(pady=10)
-    tk.Button(spotify_menu, text="Música Anterior", command=colocar_musica_anterior).pack(pady=10)
+def exibir_imagem_url(imagem_url):
+    root = tk.Tk()
+    root.title("Imagem")
+    image_bytes = requests.get(imagem_url).content
+    image = Image.open(io.BytesIO(image_bytes))
+    photo = ImageTk.PhotoImage(image)
+    label = tk.Label(root, image=photo)
+    label.pack()
+    root.mainloop()
 
-is_dark_mode = False
+def ouvir_microfone():
+    with sr.Microphone() as source:
+        recognizer.adjust_for_ambient_noise(source)
+        messagebox.showinfo("Aviso", "Fale algo para ser reconhecido.")
+        audio = recognizer.listen(source)
 
-def toggle_mode():
-    global is_dark_mode
-    is_dark_mode = not is_dark_mode
-    apply_mode()
+    try:
+        frase = recognizer.recognize_google(audio, language='pt-BR')
+        messagebox.showinfo("Reconhecimento de Voz", f"Frase reconhecida: {frase}")
+        analisar_texto(frase)
+    except sr.UnknownValueError:
+        messagebox.showinfo("Reconhecimento de Voz", "Não foi possível reconhecer a fala.")
+    except sr.RequestError as e:
+        messagebox.showerror("Erro de Serviço", f"Erro ao reconhecer fala; {e}")
 
-def apply_mode():
-    bg_color = "black" if is_dark_mode else "white"
-    fg_color = "white" if is_dark_mode else "black"
-    root.configure(bg=bg_color)
-    for widget in root.winfo_children():
-        widget.configure(bg=bg_color, fg=fg_color)
-    mode_button.configure(text="Modo Claro" if is_dark_mode else "Modo Escuro")
+def analisar_texto(frase):
+    doc = nlp(frase)
+    entidades = [(ent.text, ent.label_) for ent in doc.ents]
+    if entidades:
+        entidades_str = "Entidades reconhecidas:\n"
+        for entidade, tipo in entidades:
+            entidades_str += f"{entidade} - {tipo}\n"
+        messagebox.showinfo("Análise de Texto", entidades_str)
+    else:
+        messagebox.showinfo("Análise de Texto", "Nenhuma entidade reconhecida.")
 
+def enviar_mensagem_chat():
+    mensagem = entrada_texto.get("1.0",'end-1c')
+    if mensagem.strip() == "":
+        messagebox.showwarning("Aviso", "Você não pode enviar uma mensagem em branco.")
+    else:
+        caixa_texto.config(state=tk.NORMAL)
+        caixa_texto.insert(tk.END, f"Você: {mensagem}\n")
+        caixa_texto.config(state=tk.DISABLED)
+        entrada_texto.delete("1.0", tk.END)
+        responder_bot(mensagem)
+
+def responder_bot(mensagem):
+    respostas = [
+        "Olá! Em que posso ajudar?",
+        "Como posso ser útil hoje?",
+        "Estou aqui para ajudar. O que você precisa?",
+        "Pode contar comigo! O que deseja fazer?"
+    ]
+    resposta = random.choice(respostas)
+    caixa_texto.config(state=tk.NORMAL)
+    caixa_texto.insert(tk.END, f"Assistente: {resposta}\n")
+    caixa_texto.config(state=tk.DISABLED)
+
+# Configuração da interface gráfica
 root = tk.Tk()
-root.title("Menu Principal")
-mode_button = tk.Button(root, text="Modo Escuro", command=toggle_mode)
-mode_button.pack(pady=10)
-tk.Button(root, text="Marcar Compromisso", command=marcar_compromisso).pack(pady=10)
-tk.Button(root, text="Mostrar Compromissos", command=mostrar_compromissos).pack(pady=10)
-tk.Button(root, text="Fazer Anotação", command=fazer_anotacao).pack(pady=10)
-tk.Button(root, text="Mostrar Anotações", command=mostrar_anotacoes).pack(pady=10)
-tk.Button(root, text="Contar Piada", command=contar_piada).pack(pady=10)
-tk.Button(root, text="Fazer Pesquisa", command=fazer_pesquisa).pack(pady=10)
-tk.Button(root, text="Controlar Spotify", command=menu_spotify).pack(pady=10)
+root.title("Assistente Virtual")
 
-apply_mode()
+menu_bar = Menu(root)
+root.config(menu=menu_bar)
+
+agenda_menu = Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Agenda", menu=agenda_menu)
+agenda_menu.add_command(label="Marcar Compromisso", command=marcar_compromisso)
+agenda_menu.add_command(label="Mostrar Compromissos", command=mostrar_compromissos)
+
+anotacoes_menu = Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Anotações", menu=anotacoes_menu)
+anotacoes_menu.add_command(label="Fazer Anotação", command=fazer_anotacao)
+anotacoes_menu.add_command(label="Mostrar Anotações", command=mostrar_anotacoes)
+
+piadas_menu = Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Piadas", menu=piadas_menu)
+piadas_menu.add_command(label="Contar Piada", command=contar_piada)
+
+pesquisa_menu = Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Pesquisa", menu=pesquisa_menu)
+pesquisa_menu.add_command(label="Fazer Pesquisa", command=fazer_pesquisa)
+
+spotify_menu = Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Spotify", menu=spotify_menu)
+spotify_menu.add_command(label="Abrir Spotify", command=abrir_spotify_local)
+spotify_menu.add_command(label="Continuar Música", command=continuar_musica)
+spotify_menu.add_command(label="Pausar Música", command=pausar_musica)
+spotify_menu.add_command(label="Pesquisar Música", command=pesquisar_musica)
+
+imagem_menu = Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Imagem", menu=imagem_menu)
+imagem_menu.add_command(label="Buscar Imagem", command=buscar_imagem)
+
+voz_menu = Menu(menu_bar, tearoff=0)
+menu_bar.add_cascade(label="Voz", menu=voz_menu)
+voz_menu.add_command(label="Ouvir Microfone", command=ouvir_microfone)
+
+frame_chat = tk.Frame(root)
+frame_chat.pack(pady=10)
+
+caixa_texto = tk.Text(frame_chat, width=80, height=20)
+caixa_texto.config(state=tk.DISABLED)
+caixa_texto.pack()
+
+scrollbar = tk.Scrollbar(frame_chat, command=caixa_texto.yview)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+caixa_texto.config(yscrollcommand=scrollbar.set)
+
+frame_entrada = tk.Frame(root)
+frame_entrada.pack(pady=10)
+
+entrada_texto = tk.Text(frame_entrada, width=60, height=3)
+entrada_texto.pack()
+
+botao_enviar = tk.Button(frame_entrada, text="Enviar", command=enviar_mensagem_chat)
+botao_enviar.pack()
+
 root.mainloop()
